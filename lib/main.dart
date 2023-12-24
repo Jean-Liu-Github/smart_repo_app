@@ -1,4 +1,7 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,7 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Smart Repo~',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -28,10 +31,133 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const LoginPage(title: 'Smart Repo'),
+    );
+  }
+}
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key, required this.title});
+
+  final String title;
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  late String username;
+  late String password;
+
+  void login(String? username, String? password) {
+    var haveUsername = username?.isNotEmpty??false;
+    var havePassword = password?.isNotEmpty??false;
+    if (!haveUsername && !havePassword) {
+      Fluttertoast.showToast(msg: "请输入用户名和密码..");
+      return;
+    }
+    if (!haveUsername) {
+      Fluttertoast.showToast(msg: "请输入用户名..");
+      return;
+    }
+    if (!havePassword) {
+      Fluttertoast.showToast(msg: "请输入密码..");
+      return;
+    }
+    // TODO("发起请求")
+  }
+
+  InputDecoration _inputDecoration(String hintText) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: const TextStyle(
+        color: Colors.black54,
+        fontSize: 15,
+      ),
+      border: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.indigo, width: 2),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      // isCollapsed: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10)
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const inputFieldWidth = 350.0;
+    const sizeBox = SizedBox(width: 0, height: 20);
+    final usernameC = TextEditingController();
+    final passwordC = TextEditingController();
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Text(
+          widget.title,
+          style: const TextStyle(
+            color: Colors.indigo,
+            fontSize: 24,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
+      backgroundColor: Colors.white,
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          SizedBox(
+            width: inputFieldWidth,
+            child:  TextFormField(
+              decoration: _inputDecoration("用户名"),
+              controller: usernameC,
+            ),
+          ),
+
+          sizeBox,
+
+          SizedBox(
+            width: inputFieldWidth,
+            child: TextFormField(
+              obscureText: true,
+              decoration: _inputDecoration("密码"),
+              controller: passwordC,
+            ),
+          ),
+
+          sizeBox,
+
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              TextButton(
+                child: const Text(
+                  "登录",
+                  style: TextStyle(
+                    color: Colors.indigo,
+                    fontSize: 15,
+                  ),
+                ),
+                onPressed: () => login(usernameC.text, passwordC.text),
+              ),
+              TextButton(
+                  onPressed: () {},
+                  child: const Text(
+                    "注册",
+                    style: TextStyle(
+                      color: Colors.indigo,
+                      fontSize: 15,
+                    ),
+                  )
+              ),
+            ],
+          )
+        ],
+      ),
     );
   }
 }
