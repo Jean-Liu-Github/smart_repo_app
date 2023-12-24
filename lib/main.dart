@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:ffi';
 
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter/services.dart';
+import 'package:shake_animation_widget/shake_animation_widget.dart';
+// import 'package:fluttertoast/fluttertoast.dart';
 
 void main() {
   runApp(const MyApp());
@@ -49,116 +52,214 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  late String username;
-  late String password;
+  // 用户名/密码输入框焦点控制
+  final _usernameFN= FocusNode();
+  final _passwordFN = FocusNode();
 
-  void login(String? username, String? password) {
-    var haveUsername = username?.isNotEmpty??false;
-    var havePassword = password?.isNotEmpty??false;
-    if (!haveUsername && !havePassword) {
-      Fluttertoast.showToast(msg: "请输入用户名和密码..");
-      return;
-    }
-    if (!haveUsername) {
-      Fluttertoast.showToast(msg: "请输入用户名..");
-      return;
-    }
-    if (!havePassword) {
-      Fluttertoast.showToast(msg: "请输入密码..");
-      return;
-    }
-    // TODO("发起请求")
-  }
+  // 用户名/密码文本控制
+  final _usernameTEC = TextEditingController();
+  final _passwordTEC = TextEditingController();
 
-  InputDecoration _inputDecoration(String hintText) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(
-        color: Colors.black54,
-        fontSize: 15,
-      ),
-      border: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.indigo, width: 2),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      // isCollapsed: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10)
-    );
-  }
+  // 抖动动画控制器
+  final _usernameSAC = ShakeAnimationController();
+  final _passwordSAC = ShakeAnimationController();
+
+  // Stream 更新操作控制器
+  final _usernameSC = StreamController<String?>();
+  final _passwordSC = StreamController<String?>();
+
 
   @override
   Widget build(BuildContext context) {
-    const inputFieldWidth = 350.0;
-    const sizeBox = SizedBox(width: 0, height: 20);
-    final usernameC = TextEditingController();
-    final passwordC = TextEditingController();
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(
-          widget.title,
-          style: const TextStyle(
-            color: Colors.indigo,
-            fontSize: 24,
-            fontWeight: FontWeight.w400,
-          ),
+    //手势识别点击空白隐藏键盘
+    return GestureDetector(
+      onTap: () {
+        hindKeyBoarder();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          backgroundColor: Colors.indigo,
         ),
+        //登录页面的主体
+        body: buildLoginWidget(),
       ),
-      backgroundColor: Colors.white,
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          SizedBox(
-            width: inputFieldWidth,
-            child:  TextFormField(
-              decoration: _inputDecoration("用户名"),
-              controller: usernameC,
-            ),
+    );
+  }
+
+  void hindKeyBoarder() {
+    //输入框失去焦点
+    _usernameFN.unfocus();
+    _passwordFN.unfocus();
+
+    //隐藏键盘
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+  }
+
+  //登录页面的主体
+  Widget buildLoginWidget() {
+    return Container(
+      margin: const EdgeInsets.all(30.0),
+      //线性布局
+      child: Column(
+        children: [
+          //用户名输入框
+          buildUserNameWidget(),
+          const SizedBox(
+            height: 20,
           ),
-
-          sizeBox,
-
-          SizedBox(
-            width: inputFieldWidth,
-            child: TextFormField(
-              obscureText: true,
-              decoration: _inputDecoration("密码"),
-              controller: passwordC,
-            ),
+          //用户密码输入框
+          buildPasswordWidget(),
+          const SizedBox(
+            height: 40,
           ),
-
-          sizeBox,
-
-          Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
-              TextButton(
-                child: const Text(
-                  "登录",
-                  style: TextStyle(
-                    color: Colors.indigo,
-                    fontSize: 15,
-                  ),
-                ),
-                onPressed: () => login(usernameC.text, passwordC.text),
-              ),
-              TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    "注册",
-                    style: TextStyle(
-                      color: Colors.indigo,
-                      fontSize: 15,
-                    ),
-                  )
-              ),
-            ],
+          //登录按钮
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: ElevatedButton(
+              child: const Text("登录"),
+              // TODO(style)
+              onPressed: () {
+                checkLoginFunction();
+              },
+            ),
           )
         ],
       ),
     );
+  }
+
+  ///用户名输入框 Stream 局部更新 error提示
+  ///     ShakeAnimationWidget 抖动动画
+  ///
+  StreamBuilder<String?> buildUserNameWidget() {
+    return StreamBuilder<String?>(
+      stream: _usernameSC.stream,
+      builder: (BuildContext context, AsyncSnapshot<String?> snapshot) {
+        return ShakeAnimationWidget(
+          //微左右的抖动
+          shakeAnimationType: ShakeAnimationType.LeftRightShake,
+          //设置不开启抖动
+          isForward: false,
+          //抖动控制器
+          shakeAnimationController: _usernameSAC,
+          child: TextField(
+            //焦点控制
+            focusNode: _usernameFN,
+            //文本控制器
+            controller: _usernameTEC,
+            //键盘回车键点击回调
+            onSubmitted: (String value) {
+              //点击校验，如果有内容输入 输入焦点跳入下一个输入框
+              if (checkUsername()) {
+                _usernameFN.unfocus();
+                FocusScope.of(context).requestFocus(_passwordFN);
+              } else {
+                FocusScope.of(context).requestFocus(_usernameFN);
+              }
+            },
+            //边框样式设置
+            decoration: InputDecoration(
+              //红色的错误提示文本
+              errorText: snapshot.data,
+              labelText: "用户名",
+              //设置上下左右 都有边框
+              //设置四个角的弧度
+              border: const OutlineInputBorder(
+                //设置边框四个角的弧度
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  StreamBuilder<String?> buildPasswordWidget() {
+    return StreamBuilder<String?>(
+      stream: _passwordSC.stream,
+      builder: (BuildContext context, AsyncSnapshot<String?> snapshot) {
+        return ShakeAnimationWidget(
+          //微左右的抖动
+          shakeAnimationType: ShakeAnimationType.LeftRightShake,
+          //设置不开启抖动
+          isForward: false,
+          //抖动控制器
+          shakeAnimationController: _passwordSAC,
+          child: TextField(
+            focusNode: _passwordFN,
+            controller: _passwordTEC,
+            onSubmitted: (String value) {
+              if (checkPassword()) {
+                loginFunction();
+              } else {
+                FocusScope.of(context).requestFocus(_passwordFN);
+              }
+            },
+            //隐藏输入的文本
+            obscureText: true,
+            //最大可输入1行
+            maxLines: 1,
+            //边框样式设置
+            decoration: InputDecoration(
+              labelText: "密码",
+              errorText: snapshot.data,
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  bool checkUsername() {
+    //获取输入框中的输入文本
+    String username = _usernameTEC.text;
+    if (username.isEmpty) {
+      //Stream 事件流更新提示文案
+      _usernameSC.add("请输入用户名");
+      //抖动动画开启
+      _usernameSAC.start();
+      return false;
+    } else {
+      //清除错误提示
+      _usernameSC.add(null);
+      return true;
+    }
+  }
+
+  bool checkPassword() {
+    String password = _passwordTEC.text;
+    if (password.length < 6) {
+      _passwordSC.add("请输入标准密码");
+      _passwordSAC.start();
+      return false;
+    } else {
+      _passwordSC.add(null);
+      return true;
+    }
+  }
+
+  void checkLoginFunction() {
+    var hasUserName = checkUsername();
+    var hasPassword = checkPassword();
+      if(!hasUserName) {
+        FocusScope.of(context).requestFocus(_usernameFN);
+        return;
+      }
+      if (!hasPassword) {
+        FocusScope.of(context).requestFocus(_passwordFN);
+        return;
+      }
+      // TODO("登录逻辑")
+  }
+
+  void loginFunction() {
+
   }
 }
 
